@@ -18,7 +18,9 @@ jobs:
           - os: windows-latest
             script: build:win
             files: dist/*.exe
-          - os: macos-latest
+          # macos-latest (arm64) часто стоит в очереди из-за нехватки серверов;
+          # на Intel-сервере собирается такой же universal .dmg (Intel + Apple Silicon)
+          - os: macos-15-intel
             script: build:mac
             files: dist/*.dmg
     runs-on: ${{ matrix.os }}
