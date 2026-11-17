@@ -1,5 +1,8 @@
-const { app, BrowserWindow, shell } = require('electron');
+const { app, BrowserWindow, shell, ipcMain } = require('electron');
 const path = require('path');
+const { createStorage } = require('./storage');
+
+let storage;
 
 function createWindow() {
   const win = new BrowserWindow({
@@ -24,7 +27,18 @@ function createWindow() {
   });
 }
 
+function registerIpc() {
+  ipcMain.handle('data:load', () => storage.load());
+  ipcMain.handle('data:save', (_e, data) => { storage.save(data); return true; });
+  ipcMain.on('data:save-sync', (e, data) => {
+    try { storage.save(data); e.returnValue = true; }
+    catch (err) { console.error(err); e.returnValue = false; }
+  });
+}
+
 app.whenReady().then(() => {
+  storage = createStorage(app.getPath('userData'));
+  registerIpc();
   createWindow();
   app.on('activate', () => {
     if (BrowserWindow.getAllWindows().length === 0) createWindow();

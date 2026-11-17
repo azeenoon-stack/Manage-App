@@ -18,7 +18,7 @@ function today(off = 0){ const d = new Date(); d.setDate(d.getDate()+off); d.set
 function seed(){
   const a = uid(), b = uid(), c = uid();
   const T = (text, status, due, pr) => ({id:uid(), text, status, due, pr});
-  return { theme:'light', sel:a, pages:[
+  return { version:DATA_VERSION, theme:'light', sel:a, pages:[
     {id:a, parent:null, icon:'🏠', title:'Добро пожаловать', view:'list', open:true,
      notes:'<p>Это ваше пространство. Создавайте страницы и подстраницы слева, пишите заметки здесь, а задачи ведите ниже — списком или доской.</p>',
      tasks:[T('Создать первую страницу','todo',today(),2), T('Переключить вид на «Доску»','todo','',3), T('Открыть приложение','done','',3)]},
@@ -27,11 +27,44 @@ function seed(){
     {id:c, parent:b, icon:'🚀', title:'Проект', view:'list', open:true, notes:'', tasks:[]},
   ]};
 }
+/* ---------- данные ---------- */
+const DATA_VERSION = 1;
 let S;
-try { S = JSON.parse(localStorage.getItem(KEY)) } catch(e) {}
-if (!S || !S.pages) S = seed();
-let saveT;
-function save(){ clearTimeout(saveT); saveT = setTimeout(() => { try { localStorage.setItem(KEY, JSON.stringify(S)) } catch(e) {} }, 200); }
+// Приводим данные любой старой версии к текущей. Формат меняем только здесь.
+function migrate(d){
+  if (!d || !Array.isArray(d.pages)) throw new Error('Неверный формат данных');
+  if (!d.version){ // данные прототипа (без версии) → версия 1
+    d.version = 1;
+  }
+  return d;
+}
+let saveT = null;
+function flush(){
+  if (saveT === null) return;
+  clearTimeout(saveT); saveT = null;
+  window.api.save(S).catch(err => { console.error(err); ask('Не удалось сохранить данные: ' + err.message, 'OK', false); });
+}
+// Сохранение с задержкой ~300 мс, чтобы не писать файл на каждое нажатие клавиши.
+function save(){ clearTimeout(saveT); saveT = setTimeout(flush, 300); }
+// При закрытии окна сохраняем синхронно всё, что ещё не записано.
+window.addEventListener('beforeunload', () => {
+  if (saveT !== null){ clearTimeout(saveT); saveT = null; window.api.saveSync(S); }
+});
+async function loadData(){
+  const res = await window.api.load();
+  let msg = res.message || '';
+  if (res.data){
+    S = res.data;
+  } else {
+    // Первый запуск: переносим данные прототипа из localStorage, если они есть.
+    let old = null;
+    try { old = JSON.parse(localStorage.getItem(KEY)); } catch(e) {}
+    S = old && Array.isArray(old.pages) ? old : seed();
+  }
+  try { S = migrate(S); } catch(e){ S = migrate(seed()); }
+  if (res.status !== 'ok'){ save(); }
+  return msg;
+}
 
 const page = id => S.pages.find(p => p.id === id);
 function findTask(tid){ for (const p of S.pages){ const t = p.tasks.find(t => t.id === tid); if (t) return [p, t]; } return []; }
@@ -233,7 +266,7 @@ $('#exp').onclick = () => {
 $('#imp').onclick = () => $('#file').click();
 $('#file').onchange = async e => {
   const f = e.target.files[0]; if (!f) return;
-  try { const d = JSON.parse(await f.text()); if (!d.pages) throw 0; if (await ask('Заменить текущие данные импортированными?', 'Заменить')){ S = d; save(); render(); } }
+  try { const d = JSON.parse(await f.text()); const nd = migrate(d); if (await ask('Заменить текущие данные импортированными?', 'Заменить')){ S = nd; save(); render(); } }
   catch(err){ ask('Не удалось прочитать файл', 'OK', false); }
   e.target.value = '';
 };
@@ -243,4 +276,4 @@ document.addEventListener('keydown', e => {
 });
 document.addEventListener('click', e => { if (!e.target.closest('#icon')) document.querySelectorAll('.picker').forEach(x => x.remove()); });
 
-render();
+loadData().then(msg => { render(); if (msg) ask(msg, "OK", false); });
