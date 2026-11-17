@@ -1,0 +1,21 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1024" height="1024" viewBox="0 0 1024 1024">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#e57a4f"/>
+      <stop offset="1" stop-color="#cc5530"/>
+    </linearGradient>
+  </defs>
+  <!-- отступ ~10% как у иконок macOS -->
+  <rect x="100" y="100" width="824" height="824" rx="185" fill="url(#bg)"/>
+  <!-- лист -->
+  <rect x="262" y="230" width="500" height="580" rx="56" fill="#fffaf5"/>
+  <!-- строки задач -->
+  <g stroke-linecap="round" stroke-linejoin="round" fill="none">
+    <path d="M330 365 l38 38 l70 -80" stroke="#d9643a" stroke-width="40"/>
+    <line x1="495" y1="370" x2="690" y2="370" stroke="#d9c7bb" stroke-width="36"/>
+    <path d="M330 520 l38 38 l70 -80" stroke="#d9643a" stroke-width="40"/>
+    <line x1="495" y1="525" x2="690" y2="525" stroke="#d9c7bb" stroke-width="36"/>
+    <rect x="336" y="640" width="76" height="76" rx="18" stroke="#d9c7bb" stroke-width="30"/>
+    <line x1="495" y1="680" x2="640" y2="680" stroke="#d9c7bb" stroke-width="36"/>
+  </g>
+</svg>
