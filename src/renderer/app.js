@@ -384,16 +384,36 @@ M.addEventListener('input', e => {
   const [, t] = findTask(row.dataset.tid); if (!t) return;
   if (e.target.dataset.act === 'txt'){ t.text = e.target.textContent; save(); if (openTask === t.id) renderDetails(); }
 });
+// Поля даты/времени присылают «change» после каждой цифры (например, год «0002» при вводе «2026»).
+// Пока поле в фокусе, перерисовывать его нельзя — иначе ввод обрывается. Перерисуем, когда фокус уйдёт.
+// Фокус отслеживаем сами: у полей даты document.activeElement иногда «теряет» поле посреди ввода.
+let editingField = null, renderPending = false;
+document.addEventListener('focusin', e => { if (isDateField(e.target)) editingField = e.target; });
+document.addEventListener('focusout', e => {
+  if (e.target !== editingField) return;
+  editingField = null;
+  if (renderPending){ renderPending = false; setTimeout(render, 0); }
+});
+function renderWhenDone(el){
+  if (el === editingField && el.isConnected) renderPending = true;
+  else render();
+}
+// Недописанный год (0002, 0020, 0202) не сохраняем
+const validDate = v => !v || Number(v.slice(0, 4)) >= 1900;
+const isDateField = el => el.type === 'date' || el.type === 'time';
+
 M.addEventListener('change', e => {
   const row = e.target.closest('[data-tid]'); if (!row) return;
   const [, t] = findTask(row.dataset.tid); if (!t) return;
   const a = e.target.dataset.act;
+  if (a === 'due' && !validDate(e.target.value)) return;
   if (a === 'chk') t.status = e.target.checked ? 'done' : 'todo';
   if (a === 'due'){ t.due = e.target.value; if (!t.due) t.time = ''; }
   if (a === 'time') t.time = e.target.value;
   if (a === 'pr') t.pr = +e.target.value;
   delete t.reminded;
-  save(); render();
+  save();
+  isDateField(e.target) ? renderWhenDone(e.target) : render();
 });
 M.addEventListener('click', e => {
   const el = e.target;
@@ -503,6 +523,7 @@ D.addEventListener('input', e => {
 D.addEventListener('change', e => {
   const [p, t] = curTask(); if (!t) return;
   const a = e.target.dataset.d, v = e.target.value;
+  if (a === 'due' && !validDate(v)) return;
   if (a === 'done') t.status = e.target.checked ? 'done' : 'todo';
   else if (a === 'status') t.status = v;
   else if (a === 'due'){ t.due = v; if (!v){ t.time = ''; t.remind = ''; } }
@@ -513,7 +534,8 @@ D.addEventListener('change', e => {
   else if (a === 'sub-chk'){ t.subs.find(s => s.id === e.target.closest('[data-sid]').dataset.sid).done = e.target.checked; }
   else return;
   if (['due','time','remind','status','done'].includes(a)) delete t.reminded;
-  save(); render();
+  save();
+  isDateField(e.target) ? renderWhenDone(e.target) : render();
 });
 D.addEventListener('click', e => {
   const a = e.target.dataset.d;
