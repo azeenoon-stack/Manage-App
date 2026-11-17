@@ -1,0 +1,19 @@
+{
+  "name": "planer",
+  "productName": "Планер",
+  "version": "1.0.0",
+  "description": "Простой планер задач и заметок",
+  "main": "main.js",
+  "scripts": {
+    "start": "electron .",
+    "build:win": "electron-builder --win",
+    "build:mac": "electron-builder --mac"
+  },
+  "build": {
+    "appId": "uz.planer.app",
+    "productName": "Planer",
+    "files": ["main.js", "index.html"],
+    "win": { "target": "nsis" },
+    "mac": { "target": "dmg", "category": "public.app-category.productivity" }
+  }
+}

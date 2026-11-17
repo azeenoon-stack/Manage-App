@@ -1,0 +1,358 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Планер</title>
+<style>
+:root{--bg:#fbfbfa;--side:#f4f3ef;--text:#2f2e2b;--muted:#8a8780;--line:#e7e5e0;--hover:#ebe9e4;--accent:#d9643a;--card:#fff;--p1:#e5484d;--p2:#e9a23b;--p3:#3e9b6c;--shadow:0 1px 2px rgba(0,0,0,.06),0 2px 8px rgba(0,0,0,.04)}
+[data-theme=dark]{--bg:#1c1c1a;--side:#232321;--text:#e9e7e2;--muted:#8f8c85;--line:#353431;--hover:#2e2d2a;--card:#262624;--shadow:0 1px 2px rgba(0,0,0,.3)}
+*{box-sizing:border-box}
+html,body{height:100%}
+body{margin:0;font:14px/1.5 -apple-system,BlinkMacSystemFont,"Segoe UI",Inter,Roboto,sans-serif;background:var(--bg);color:var(--text);display:flex;overflow:hidden}
+button,input,select{font:inherit;color:inherit}
+button{cursor:pointer;background:none;border:0}
+/* sidebar */
+aside{width:260px;flex:none;background:var(--side);border-right:1px solid var(--line);display:flex;flex-direction:column;user-select:none}
+.brand{padding:16px 14px 8px;font-weight:700;font-size:15px;display:flex;align-items:center;gap:8px}
+.brand i{width:22px;height:22px;border-radius:6px;background:var(--accent);display:inline-block}
+.search{margin:4px 10px 8px;padding:6px 10px;border-radius:7px;border:1px solid var(--line);background:var(--bg);outline:none;width:calc(100% - 20px)}
+.nav{overflow:auto;flex:1;padding:0 6px 10px}
+.sec{font-size:11px;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);padding:12px 8px 4px;display:flex;justify-content:space-between;align-items:center}
+.sec button{font-size:16px;line-height:1;color:var(--muted);padding:0 4px;border-radius:4px}
+.sec button:hover{background:var(--hover);color:var(--text)}
+.item{display:flex;align-items:center;gap:6px;padding:4px 8px;border-radius:6px;cursor:pointer;white-space:nowrap}
+.item:hover{background:var(--hover)}
+.item.active{background:var(--hover);font-weight:600}
+.item .nm{flex:1;overflow:hidden;text-overflow:ellipsis}
+.item .tw{width:12px;color:var(--muted);font-size:10px;text-align:center}
+.item .acts{display:none;gap:2px}
+.item:hover .acts{display:flex}
+.item .acts b{font-weight:400;color:var(--muted);padding:0 5px;border-radius:4px}
+.item .acts b:hover{background:var(--line);color:var(--text)}
+.badge{font-size:11px;background:var(--accent);color:#fff;border-radius:10px;padding:0 7px}
+.foot{border-top:1px solid var(--line);padding:8px;display:flex;gap:4px;flex-wrap:wrap}
+.foot button{padding:5px 8px;border-radius:6px;color:var(--muted);font-size:12px}
+.foot button:hover{background:var(--hover);color:var(--text)}
+/* main */
+main{flex:1;overflow:auto}
+.page{max-width:860px;margin:0 auto;padding:56px 56px 120px}
+.crumbs{color:var(--muted);font-size:12px;margin-bottom:10px}
+.icon{font-size:44px;cursor:pointer;display:inline-block;border-radius:8px;padding:2px 6px;margin-left:-6px;position:relative}
+.icon:hover{background:var(--hover)}
+.picker{position:absolute;top:60px;left:0;background:var(--card);border:1px solid var(--line);box-shadow:var(--shadow);border-radius:10px;padding:8px;display:grid;grid-template-columns:repeat(8,34px);gap:2px;z-index:10;font-size:20px}
+.picker span{text-align:center;border-radius:6px;cursor:pointer;padding:3px 0}
+.picker span:hover{background:var(--hover)}
+.title{display:block;width:100%;border:0;outline:none;background:none;font-size:34px;font-weight:700;margin:6px 0 4px;padding:0}
+.notes{min-height:40px;outline:none;padding:6px 0 18px;border-bottom:1px solid var(--line);margin-bottom:22px}
+.notes:empty:before{content:attr(data-ph);color:var(--muted)}
+.notes ul{padding-left:22px}
+.thead{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px}
+.thead h3{margin:0;font-size:16px}
+.cnt{color:var(--muted);font-weight:400;font-size:13px;margin-left:6px}
+.seg{display:flex;background:var(--hover);border-radius:8px;padding:2px}
+.seg button{padding:4px 12px;border-radius:6px;font-size:13px;color:var(--muted)}
+.seg button.on{background:var(--card);color:var(--text);box-shadow:var(--shadow)}
+.add{width:100%;border:1px dashed var(--line);border-radius:8px;background:none;padding:9px 12px;outline:none;margin-bottom:10px}
+.add:focus{border-style:solid;border-color:var(--accent)}
+/* list */
+.task{display:flex;align-items:center;gap:10px;padding:6px 8px;border-radius:7px}
+.task:hover{background:var(--hover)}
+.task input[type=checkbox]{width:17px;height:17px;accent-color:var(--accent);flex:none;cursor:pointer}
+.task .txt{flex:1;outline:none;min-width:40px}
+.task.done .txt{text-decoration:line-through;color:var(--muted)}
+.task .from{font-size:12px;color:var(--muted);cursor:pointer;white-space:nowrap}
+.task .from:hover{color:var(--accent)}
+.date{border:0;background:none;color:var(--muted);font-size:12px;width:118px;cursor:pointer}
+.date.over{color:var(--p1)}
+.date.today{color:var(--accent);font-weight:600}
+.pr{border:0;background:none;font-size:12px;cursor:pointer;padding:2px 4px;border-radius:5px}
+.pr1{color:var(--p1)}.pr2{color:var(--p2)}.pr3{color:var(--p3)}
+.x{color:var(--muted);opacity:0;padding:0 6px;font-size:16px}
+.task:hover .x,.card:hover .x{opacity:1}
+.x:hover{color:var(--p1)}
+.group{font-size:12px;color:var(--muted);margin:16px 8px 4px;text-transform:uppercase;letter-spacing:.05em}
+.empty{color:var(--muted);padding:20px 8px}
+/* board */
+.board{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}
+.col{background:var(--side);border-radius:10px;padding:8px;min-height:160px}
+.col.over{outline:2px dashed var(--accent);outline-offset:-2px}
+.col h4{margin:2px 4px 8px;font-size:13px;display:flex;justify-content:space-between;color:var(--muted)}
+.card{background:var(--card);border:1px solid var(--line);border-radius:8px;padding:8px 10px;margin-bottom:6px;box-shadow:var(--shadow);cursor:grab}
+.card.drag{opacity:.4}
+.card .row{display:flex;align-items:center;gap:6px;margin-top:4px;font-size:12px;color:var(--muted)}
+.card .txt{outline:none}
+.dot{width:8px;height:8px;border-radius:50%;display:inline-block}
+.modal{position:fixed;inset:0;background:rgba(0,0,0,.3);display:flex;align-items:center;justify-content:center;z-index:50}
+.modal div{background:var(--card);border-radius:12px;padding:20px;max-width:360px;box-shadow:var(--shadow)}
+.modal p{margin:0 0 16px}
+.modal nav{display:flex;gap:8px;justify-content:flex-end}
+.modal button{padding:6px 14px;border-radius:7px;background:var(--hover)}
+.modal button.ok{background:var(--accent);color:#fff}
+@media(max-width:760px){aside{width:200px}.page{padding:30px 20px}.board{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+<aside>
+  <div class="brand"><i></i>Планер</div>
+  <input class="search" id="q" placeholder="Поиск страниц…">
+  <div class="nav" id="nav"></div>
+  <div class="foot">
+    <button id="theme">◐ Тема</button>
+    <button id="exp">⬇ Экспорт</button>
+    <button id="imp">⬆ Импорт</button>
+    <input type="file" id="file" accept=".json" hidden>
+  </div>
+</aside>
+<main id="main"></main>
+
+<script>
+const KEY = 'planer-v1';
+const EMOJI = ['📄','🏠','💼','📌','🎯','✅','📚','💡','🛒','✈️','🏋️','🎨','💰','🧠','📅','🔥','⭐','🌱','🎵','🍳','🧩','🚀','❤️','📝'];
+const STAT = {todo:'Сделать', doing:'В работе', done:'Готово'};
+const PR = {1:'● Высокий', 2:'● Средний', 3:'● Низкий'};
+function ask(msg, okText = 'Удалить', cancel = true){
+  return new Promise(res => {
+    const m = document.createElement('div'); m.className = 'modal';
+    m.innerHTML = `<div><p>${esc(msg)}</p><nav>${cancel?'<button data-r="0">Отмена</button>':''}<button class="ok" data-r="1">${okText}</button></nav></div>`;
+    m.onclick = e => { if (e.target.dataset.r !== undefined || e.target === m){ m.remove(); res(e.target.dataset.r === '1'); } };
+    document.body.appendChild(m);
+  });
+}
+const uid = () => Math.random().toString(36).slice(2, 10);
+const $ = s => document.querySelector(s);
+const esc = s => String(s).replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+function today(off = 0){ const d = new Date(); d.setDate(d.getDate()+off); d.setMinutes(d.getMinutes()-d.getTimezoneOffset()); return d.toISOString().slice(0,10); }
+
+function seed(){
+  const a = uid(), b = uid(), c = uid();
+  const T = (text, status, due, pr) => ({id:uid(), text, status, due, pr});
+  return { theme:'light', sel:a, pages:[
+    {id:a, parent:null, icon:'🏠', title:'Добро пожаловать', view:'list', open:true,
+     notes:'<p>Это ваше пространство. Создавайте страницы и подстраницы слева, пишите заметки здесь, а задачи ведите ниже — списком или доской.</p>',
+     tasks:[T('Создать первую страницу','todo',today(),2), T('Переключить вид на «Доску»','todo','',3), T('Открыть приложение','done','',3)]},
+    {id:b, parent:null, icon:'💼', title:'Работа', view:'board', open:true, notes:'',
+     tasks:[T('Подготовить отчёт','doing',today(1),1), T('Созвон с командой','todo',today(),2), T('Обновить план','todo','',3)]},
+    {id:c, parent:b, icon:'🚀', title:'Проект', view:'list', open:true, notes:'', tasks:[]},
+  ]};
+}
+let S;
+try { S = JSON.parse(localStorage.getItem(KEY)) } catch(e) {}
+if (!S || !S.pages) S = seed();
+let saveT;
+function save(){ clearTimeout(saveT); saveT = setTimeout(() => { try { localStorage.setItem(KEY, JSON.stringify(S)) } catch(e) {} }, 200); }
+
+const page = id => S.pages.find(p => p.id === id);
+function findTask(tid){ for (const p of S.pages){ const t = p.tasks.find(t => t.id === tid); if (t) return [p, t]; } return []; }
+function allTasks(){ return S.pages.flatMap(p => p.tasks.map(t => ({...t, _p:p}))); }
+function descendants(id){ const out=[id]; S.pages.filter(p=>p.parent===id).forEach(k=>out.push(...descendants(k.id))); return out; }
+
+/* ---------- sidebar ---------- */
+function tree(parent, depth){
+  return S.pages.filter(p => p.parent === parent).map(p => {
+    const kids = S.pages.some(k => k.parent === p.id);
+    return `<div class="item ${S.sel===p.id?'active':''}" style="padding-left:${8+depth*14}px" data-go="${p.id}">
+      <span class="tw" data-tog="${p.id}">${kids ? (p.open ? '▾' : '▸') : ''}</span>
+      <span>${p.icon}</span><span class="nm">${esc(p.title || 'Без названия')}</span>
+      <span class="acts"><b data-add="${p.id}" title="Подстраница">+</b><b data-del="${p.id}" title="Удалить">×</b></span>
+    </div>` + (kids && p.open ? tree(p.id, depth+1) : '');
+  }).join('');
+}
+function renderNav(){
+  const q = $('#q').value.trim().toLowerCase();
+  const td = today();
+  const nToday = allTasks().filter(t => t.status !== 'done' && t.due && t.due <= td).length;
+  let html = `
+    <div class="item ${S.sel==='@today'?'active':''}" data-go="@today"><span class="tw"></span><span>☀️</span><span class="nm">Сегодня</span>${nToday?`<span class="badge">${nToday}</span>`:''}</div>
+    <div class="item ${S.sel==='@all'?'active':''}" data-go="@all"><span class="tw"></span><span>🗂️</span><span class="nm">Все задачи</span></div>
+    <div class="sec">Страницы <button data-add="" title="Новая страница (Ctrl/⌘+N)">+</button></div>`;
+  if (q){
+    const hits = S.pages.filter(p => (p.title||'').toLowerCase().includes(q) || (p.notes||'').toLowerCase().includes(q));
+    html += hits.map(p => `<div class="item ${S.sel===p.id?'active':''}" data-go="${p.id}"><span class="tw"></span><span>${p.icon}</span><span class="nm">${esc(p.title||'Без названия')}</span></div>`).join('') || '<div class="empty">Ничего не найдено</div>';
+  } else html += tree(null, 0);
+  $('#nav').innerHTML = html;
+}
+$('#nav').addEventListener('click', e => {
+  const t = e.target.closest('[data-tog],[data-add],[data-del],[data-go]'); if (!t) return;
+  if (t.dataset.tog && t.textContent.trim()){ const p = page(t.dataset.tog); p.open = !p.open; save(); renderNav(); return; }
+  if (t.dataset.add !== undefined){ addPage(t.dataset.add || null); return; }
+  if (t.dataset.del){ delPage(t.dataset.del); return; }
+  if (t.dataset.go){ go(t.dataset.go); }
+});
+$('#q').addEventListener('input', renderNav);
+
+function go(id){ S.sel = id; save(); render(); }
+function addPage(parent){
+  const p = {id:uid(), parent, icon:'📄', title:'', notes:'', view:'list', open:true, tasks:[]};
+  if (parent) page(parent).open = true;
+  S.pages.push(p); go(p.id);
+  setTimeout(() => $('#title') && $('#title').focus(), 0);
+}
+async function delPage(id){
+  const p = page(id), ids = descendants(id);
+  const extra = ids.length > 1 ? ` и ${ids.length-1} подстраниц(ы)` : '';
+  if (!await ask(`Удалить «${p.title || 'Без названия'}»${extra}?`)) return;
+  S.pages = S.pages.filter(x => !ids.includes(x.id));
+  if (ids.includes(S.sel)) S.sel = S.pages[0] ? S.pages[0].id : '@today';
+  save(); render();
+}
+
+/* ---------- main ---------- */
+function dateCls(t){ if (!t.due || t.status==='done') return ''; const td = today(); return t.due < td ? 'over' : t.due === td ? 'today' : ''; }
+function taskRow(t, showFrom){
+  return `<div class="task ${t.status==='done'?'done':''}" data-tid="${t.id}">
+    <input type="checkbox" data-act="chk" ${t.status==='done'?'checked':''}>
+    <span class="txt" contenteditable="true" spellcheck="false" data-act="txt">${esc(t.text)}</span>
+    ${showFrom ? `<span class="from" data-go="${t._p.id}">${t._p.icon} ${esc(t._p.title||'Без названия')}</span>` : ''}
+    <input type="date" class="date ${dateCls(t)}" data-act="due" value="${t.due||''}">
+    <select class="pr pr${t.pr}" data-act="pr">${[1,2,3].map(n=>`<option value="${n}" ${t.pr==n?'selected':''}>${PR[n]}</option>`).join('')}</select>
+    <button class="x" data-act="del" title="Удалить">×</button>
+  </div>`;
+}
+function sortTasks(ts){ return [...ts].sort((a,b) => (a.status==='done') - (b.status==='done') || (a.due||'9999').localeCompare(b.due||'9999') || a.pr - b.pr); }
+
+function renderMain(){
+  const m = $('#main');
+  if (S.sel === '@today' || S.sel === '@all'){
+    const td = today(), isToday = S.sel === '@today';
+    const ts = allTasks();
+    let body = '';
+    if (isToday){
+      const over = sortTasks(ts.filter(t => t.status!=='done' && t.due && t.due < td));
+      const now = sortTasks(ts.filter(t => t.status!=='done' && t.due === td));
+      const soon = sortTasks(ts.filter(t => t.status!=='done' && t.due > td && t.due <= today(7)));
+      const g = (name, arr) => arr.length ? `<div class="group">${name}</div>` + arr.map(t => taskRow(t, true)).join('') : '';
+      body = g('Просрочено', over) + g('Сегодня', now) + g('Ближайшие 7 дней', soon) || '<div class="empty">На сегодня задач нет — отличный день 🎉</div>';
+    } else {
+      body = S.pages.filter(p => p.tasks.length).map(p => `<div class="group">${p.icon} ${esc(p.title||'Без названия')}</div>` + sortTasks(p.tasks.map(t => ({...t,_p:p}))).map(t => taskRow(t, false)).join('')).join('') || '<div class="empty">Задач пока нет</div>';
+    }
+    m.innerHTML = `<div class="page"><div class="icon" style="cursor:default">${isToday?'☀️':'🗂️'}</div>
+      <div class="title">${isToday?'Сегодня':'Все задачи'}</div>
+      <div class="crumbs">${new Date().toLocaleDateString('ru-RU',{weekday:'long',day:'numeric',month:'long'})}</div>
+      <div style="margin-top:18px">${body}</div></div>`;
+    return;
+  }
+  const p = page(S.sel);
+  if (!p){ S.sel = '@today'; return renderMain(); }
+  const crumbs = []; let c = p; while (c.parent){ c = page(c.parent); if (!c) break; crumbs.unshift(`${c.icon} ${esc(c.title||'Без названия')}`); }
+  const done = p.tasks.filter(t => t.status==='done').length;
+  let tasksHtml;
+  if (p.view === 'board'){
+    tasksHtml = `<div class="board">${Object.keys(STAT).map(s => {
+      const items = p.tasks.filter(t => t.status === s);
+      return `<div class="col" data-col="${s}"><h4>${STAT[s]}<span>${items.length}</span></h4>${items.map(t => `
+        <div class="card" draggable="true" data-tid="${t.id}">
+          <div style="display:flex;gap:6px"><div class="txt" contenteditable="true" data-act="txt" style="flex:1">${esc(t.text)}</div><button class="x" data-act="del">×</button></div>
+          <div class="row"><span class="dot" style="background:var(--p${t.pr})"></span>
+          <input type="date" class="date ${dateCls(t)}" data-act="due" value="${t.due||''}"></div>
+        </div>`).join('')}</div>`; }).join('')}</div>`;
+  } else {
+    tasksHtml = sortTasks(p.tasks).map(t => taskRow(t, false)).join('') || '<div class="empty">Задач пока нет — добавьте первую выше</div>';
+  }
+  m.innerHTML = `<div class="page">
+    <div class="crumbs">${crumbs.join(' / ') || '&nbsp;'}</div>
+    <div class="icon" id="icon">${p.icon}</div>
+    <input class="title" id="title" placeholder="Без названия" value="${esc(p.title)}">
+    <div class="notes" id="notes" contenteditable="true" data-ph="Заметки… (Enter — новая строка, «- » в начале — список)">${p.notes}</div>
+    <div class="thead"><h3>Задачи<span class="cnt">${done}/${p.tasks.length}</span></h3>
+      <div class="seg"><button data-view="list" class="${p.view!=='board'?'on':''}">☰ Список</button><button data-view="board" class="${p.view==='board'?'on':''}">▦ Доска</button></div></div>
+    <input class="add" id="addt" placeholder="+ Новая задача — введите и нажмите Enter">
+    ${tasksHtml}
+  </div>`;
+  if (!p.title) $('#title').focus();
+}
+function render(){ document.documentElement.dataset.theme = S.theme; renderNav(); renderMain(); }
+
+/* ---------- main events ---------- */
+const M = $('#main');
+M.addEventListener('input', e => {
+  const p = page(S.sel);
+  if (e.target.id === 'title'){ p.title = e.target.value; save(); renderNav(); return; }
+  if (e.target.id === 'notes'){
+    p.notes = e.target.innerHTML === '<br>' ? '' : e.target.innerHTML; save(); return;
+  }
+  const row = e.target.closest('[data-tid]'); if (!row) return;
+  const [, t] = findTask(row.dataset.tid); if (!t) return;
+  if (e.target.dataset.act === 'txt'){ t.text = e.target.textContent; save(); }
+});
+M.addEventListener('change', e => {
+  const row = e.target.closest('[data-tid]'); if (!row) return;
+  const [, t] = findTask(row.dataset.tid); if (!t) return;
+  const a = e.target.dataset.act;
+  if (a === 'chk') t.status = e.target.checked ? 'done' : 'todo';
+  if (a === 'due') t.due = e.target.value;
+  if (a === 'pr') t.pr = +e.target.value;
+  save(); render();
+});
+M.addEventListener('click', e => {
+  const el = e.target;
+  if (el.dataset.go){ go(el.dataset.go); return; }
+  if (el.dataset.view){ page(S.sel).view = el.dataset.view; save(); renderMain(); return; }
+  if (el.dataset.act === 'del'){
+    const row = el.closest('[data-tid]'); const [p] = findTask(row.dataset.tid);
+    p.tasks = p.tasks.filter(t => t.id !== row.dataset.tid); save(); render(); return;
+  }
+  if (el.id === 'icon'){
+    if (el.querySelector('.picker')) { el.querySelector('.picker').remove(); return; }
+    el.insertAdjacentHTML('beforeend', `<div class="picker">${EMOJI.map(x => `<span data-emo="${x}">${x}</span>`).join('')}</div>`); return;
+  }
+  if (el.dataset.emo){ page(S.sel).icon = el.dataset.emo; save(); render(); }
+});
+M.addEventListener('keydown', e => {
+  if (e.target.id === 'addt' && e.key === 'Enter' && e.target.value.trim()){
+    const p = page(S.sel);
+    p.tasks.push({id:uid(), text:e.target.value.trim(), status:'todo', due:'', pr:3});
+    save(); render(); $('#addt').focus();
+  }
+  if (e.target.id === 'title' && e.key === 'Enter'){ e.preventDefault(); $('#notes').focus(); }
+  if (e.target.dataset.act === 'txt' && e.key === 'Enter'){ e.preventDefault(); e.target.blur(); }
+  if (e.target.id === 'notes' && e.key === ' '){
+    // "- " at line start → bullet list
+    const sel = getSelection(), node = sel.anchorNode;
+    if (node && node.nodeType === 3 && node.textContent.slice(0, sel.anchorOffset) === '-' ){
+      e.preventDefault(); node.textContent = node.textContent.slice(1);
+      document.execCommand('insertUnorderedList');
+    }
+  }
+});
+M.addEventListener('focusout', e => { if (e.target.dataset.act === 'txt') render(); });
+
+/* drag & drop on board */
+let dragId = null;
+M.addEventListener('dragstart', e => { const c = e.target.closest('.card'); if (!c) return; dragId = c.dataset.tid; c.classList.add('drag'); e.dataTransfer.effectAllowed = 'move'; });
+M.addEventListener('dragend', () => { dragId = null; document.querySelectorAll('.drag,.over').forEach(x => x.classList.remove('drag','over')); });
+M.addEventListener('dragover', e => { const col = e.target.closest('.col'); if (!col || !dragId) return; e.preventDefault(); document.querySelectorAll('.col.over').forEach(x => x !== col && x.classList.remove('over')); col.classList.add('over'); });
+M.addEventListener('drop', e => {
+  const col = e.target.closest('.col'); if (!col || !dragId) return; e.preventDefault();
+  const [p, t] = findTask(dragId); t.status = col.dataset.col;
+  const over = e.target.closest('.card');
+  p.tasks = p.tasks.filter(x => x !== t);
+  const idx = over ? p.tasks.findIndex(x => x.id === over.dataset.tid) : -1;
+  idx >= 0 ? p.tasks.splice(idx, 0, t) : p.tasks.push(t);
+  save(); render();
+});
+
+/* ---------- footer ---------- */
+$('#theme').onclick = () => { S.theme = S.theme === 'dark' ? 'light' : 'dark'; save(); render(); };
+$('#exp').onclick = () => {
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(new Blob([JSON.stringify(S, null, 2)], {type:'application/json'}));
+  a.download = `planer-${today()}.json`; a.click();
+};
+$('#imp').onclick = () => $('#file').click();
+$('#file').onchange = async e => {
+  const f = e.target.files[0]; if (!f) return;
+  try { const d = JSON.parse(await f.text()); if (!d.pages) throw 0; if (await ask('Заменить текущие данные импортированными?', 'Заменить')){ S = d; save(); render(); } }
+  catch(err){ ask('Не удалось прочитать файл', 'OK', false); }
+  e.target.value = '';
+};
+document.addEventListener('keydown', e => {
+  if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'n'){ e.preventDefault(); addPage(null); }
+  if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'k'){ e.preventDefault(); $('#q').focus(); }
+});
+document.addEventListener('click', e => { if (!e.target.closest('#icon')) document.querySelectorAll('.picker').forEach(x => x.remove()); });
+
+render();
+</script>
+</body>
+</html>
