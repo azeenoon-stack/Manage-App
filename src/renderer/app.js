@@ -256,24 +256,36 @@ M.addEventListener('drop', e => {
   save(); render();
 });
 
-/* ---------- footer ---------- */
-$('#theme').onclick = () => { S.theme = S.theme === 'dark' ? 'light' : 'dark'; save(); render(); };
-$('#exp').onclick = () => {
-  const a = document.createElement('a');
-  a.href = URL.createObjectURL(new Blob([JSON.stringify(S, null, 2)], {type:'application/json'}));
-  a.download = `planer-${today()}.json`; a.click();
-};
-$('#imp').onclick = () => $('#file').click();
-$('#file').onchange = async e => {
-  const f = e.target.files[0]; if (!f) return;
-  try { const d = JSON.parse(await f.text()); const nd = migrate(d); if (await ask('Заменить текущие данные импортированными?', 'Заменить')){ S = nd; save(); render(); } }
-  catch(err){ ask('Не удалось прочитать файл', 'OK', false); }
-  e.target.value = '';
-};
-document.addEventListener('keydown', e => {
-  if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'n'){ e.preventDefault(); addPage(null); }
-  if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'k'){ e.preventDefault(); $('#q').focus(); }
+/* ---------- тема, экспорт, импорт ---------- */
+function toggleTheme(){ S.theme = S.theme === 'dark' ? 'light' : 'dark'; save(); render(); }
+async function exportData(){
+  flush();
+  try {
+    const r = await window.api.exportData(JSON.stringify(S, null, 2));
+    if (r.ok) ask('Данные сохранены в файл:\n' + r.path, 'OK', false);
+  } catch(err){ ask('Не удалось сохранить файл: ' + err.message, 'OK', false); }
+}
+async function importData(){
+  let r;
+  try { r = await window.api.importData(); } catch(err){ ask('Не удалось открыть файл: ' + err.message, 'OK', false); return; }
+  if (r.canceled) return;
+  let nd;
+  try { nd = migrate(JSON.parse(r.text)); } catch(err){ ask('Не удалось прочитать файл: это не файл данных Планера.', 'OK', false); return; }
+  if (await ask('Заменить текущие данные импортированными?', 'Заменить')){ S = nd; save(); render(); }
+}
+$('#theme').onclick = toggleTheme;
+$('#exp').onclick = exportData;
+$('#imp').onclick = importData;
+
+// Команды из меню приложения
+window.api.onCommand(cmd => {
+  if (cmd === 'new-page') addPage(null);
+  if (cmd === 'export') exportData();
+  if (cmd === 'import') importData();
+  if (cmd === 'toggle-theme') toggleTheme();
+  if (cmd === 'palette') $('#q').focus();
 });
 document.addEventListener('click', e => { if (!e.target.closest('#icon')) document.querySelectorAll('.picker').forEach(x => x.remove()); });
 
-loadData().then(msg => { render(); if (msg) ask(msg, "OK", false); });
+window.api.info().then(info => { document.body.classList.toggle('mac', info.platform === 'darwin'); });
+loadData().then(msg => { render(); if (msg) ask(msg, 'OK', false); });

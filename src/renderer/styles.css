@@ -83,3 +83,8 @@ main{flex:1;overflow:auto}
 .modal button{padding:6px 14px;border-radius:7px;background:var(--hover)}
 .modal button.ok{background:var(--accent);color:#fff}
 @media(max-width:760px){aside{width:200px}.page{padding:30px 20px}.board{grid-template-columns:1fr}}
+/* macOS: место под «светофор», за верхнюю полосу можно двигать окно */
+body.mac aside{padding-top:30px;-webkit-app-region:drag}
+body.mac aside input,body.mac aside .nav,body.mac aside .foot,body.mac aside button{-webkit-app-region:no-drag}
+body.mac main .page{-webkit-app-region:no-drag}
+.modal p{white-space:pre-line;word-break:break-word}
