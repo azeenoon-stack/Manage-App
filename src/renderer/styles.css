@@ -294,3 +294,4 @@ main.calmode{overflow:hidden;display:flex}
 .foot .calbtn{font-size:17px;padding:2px 8px;line-height:1.4;color:var(--text)}
 .chip.allday.pr-bg2,.ev.pr-bg2{color:#3d2a05}
 .foot button{white-space:nowrap}
+.chip.allday b{font-weight:400;opacity:.9;flex:none}

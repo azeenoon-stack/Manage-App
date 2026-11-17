@@ -34,11 +34,9 @@ function tasksByDay(from, to){
 function chipHtml({t, p}, mode = 'month'){
   const done = t.status === 'done' ? 'done' : '';
   const tip = esc(`${t.text || 'Без названия'}\n${p.icon} ${p.title || UNTITLED}${t.time ? '\n' + t.time : ''}`);
-  if (mode === 'month' && t.time){
-    // задача со временем: точка цвета приоритета + время, как событие в Google Календаре
-    return `<div class="chip timed ${done}" draggable="true" data-tid="${t.id}" title="${tip}"><i class="dot" style="background:var(--p${t.pr})"></i><b>${t.time}</b><span>${esc(t.text || 'Без названия')}</span></div>`;
-  }
-  return `<div class="chip allday pr-bg${t.pr} ${done}" draggable="true" data-tid="${t.id}" title="${tip}"><span>${esc(t.text || 'Без названия')}</span></div>`;
+  // любая задача — цветная плашка цвета приоритета; у задач со временем время стоит перед названием
+  const time = mode === 'month' && t.time ? `<b>${t.time}</b>` : '';
+  return `<div class="chip allday pr-bg${t.pr} ${done}" draggable="true" data-tid="${t.id}" title="${tip}">${time}<span>${esc(t.text || 'Без названия')}</span></div>`;
 }
 
 function calTitle(){
