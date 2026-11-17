@@ -8,9 +8,9 @@
 <link rel="stylesheet" href="styles.css">
 </head>
 <body>
-<aside>
-  <div class="brand"><i></i>Планер</div>
-  <input class="search" id="q" placeholder="Поиск страниц…">
+<aside id="side">
+  <div class="brand"><i></i><span>Планер</span><button class="iconbtn" id="hideSide" title="Скрыть панель">«</button></div>
+  <button class="search" id="searchBtn"><span>🔍 Поиск</span><kbd id="kbdK">Ctrl K</kbd></button>
   <div class="nav" id="nav"></div>
   <div class="foot">
     <button id="theme">◐ Тема</button>
@@ -18,7 +18,10 @@
     <button id="imp">⬆ Импорт</button>
   </div>
 </aside>
+<button class="iconbtn showside" id="showSide" title="Показать панель">☰</button>
 <main id="main"></main>
+<aside id="details" class="details" aria-label="Задача"></aside>
+<div id="toasts"></div>
 <script src="app.js"></script>
 </body>
 </html>

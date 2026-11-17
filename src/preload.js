@@ -11,6 +11,8 @@ contextBridge.exposeInMainWorld('api', {
   // экспорт и импорт через системные диалоги
   exportData: text => ipcRenderer.invoke('data:export', text),
   importData: () => ipcRenderer.invoke('data:import'),
+  // список напоминаний: [{ id, at, title, body, pageId }]
+  setReminders: list => ipcRenderer.send('reminders:set', list),
   // команды из меню и уведомлений
   onCommand: fn => ipcRenderer.on('command', (_e, cmd, arg) => fn(cmd, arg)),
 });

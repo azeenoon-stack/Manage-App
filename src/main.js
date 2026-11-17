@@ -1,5 +1,5 @@
 // Главный процесс Electron: окно, меню, работа с файлами.
-const { app, BrowserWindow, shell, ipcMain, Menu, dialog, screen } = require('electron');
+const { app, BrowserWindow, shell, ipcMain, Menu, dialog, screen, Notification } = require('electron');
 const fs = require('fs');
 const path = require('path');
 const { createStorage } = require('./storage');
@@ -198,6 +198,36 @@ function buildMenu() {
   Menu.setApplicationMenu(Menu.buildFromTemplate(template));
 }
 
+/* ---------- напоминания ---------- */
+// Интерфейс присылает список напоминаний после каждого сохранения; здесь мы ждём нужного
+// момента и показываем системное уведомление. Пропущенные (до 24 ч назад) показываем сразу.
+let reminders = [];
+let remTimer = null;
+const fired = new Set();
+const shown = new Set(); // держим ссылки, чтобы уведомления не собрал сборщик мусора
+
+function fireReminder(r) {
+  fired.add(`${r.id}:${r.at}`);
+  if (win) send('reminded', { id: r.id, at: r.at });
+  if (!Notification.isSupported()) return;
+  const n = new Notification({ title: r.title, body: r.body, silent: false });
+  n.on('click', () => { showWindow(); send('open-task', { pageId: r.pageId, taskId: r.id }); shown.delete(n); });
+  n.on('close', () => shown.delete(n));
+  shown.add(n);
+  n.show();
+}
+
+function scheduleReminders() {
+  clearTimeout(remTimer);
+  const now = Date.now();
+  for (const r of reminders) {
+    if (r.at <= now && !fired.has(`${r.id}:${r.at}`)) fireReminder(r);
+  }
+  const next = Math.min(...reminders.filter(r => r.at > now).map(r => r.at));
+  // проверяем не реже раза в минуту — на случай сна компьютера или перевода часов
+  if (Number.isFinite(next)) remTimer = setTimeout(scheduleReminders, Math.min(next - now, 60000) + 50);
+}
+
 /* ---------- обмен с интерфейсом ---------- */
 function localDate() {
   const d = new Date();
@@ -206,6 +236,11 @@ function localDate() {
 
 function registerIpc() {
   ipcMain.handle('app:info', () => ({ platform: process.platform, version: app.getVersion() }));
+
+  ipcMain.on('reminders:set', (_e, list) => {
+    reminders = Array.isArray(list) ? list.filter(r => r && r.id && Number.isFinite(r.at)) : [];
+    scheduleReminders();
+  });
 
   ipcMain.handle('data:load', () => storage.load());
   ipcMain.handle('data:save', (_e, data) => { storage.save(data); return true; });
@@ -238,7 +273,8 @@ function registerIpc() {
 
 /* ---------- запуск ---------- */
 app.whenReady().then(() => {
-  if (process.platform === 'win32') app.setAppUserModelId('uz.planer.app');
+  // ID нужен Windows для уведомлений (в установленной версии совпадает с ярлыком в меню «Пуск»)
+  if (process.platform === 'win32') app.setAppUserModelId(app.isPackaged ? 'uz.planer.app' : process.execPath);
   storage = createStorage(app.getPath('userData'));
   registerIpc();
   buildMenu();
