@@ -305,6 +305,9 @@ const sortPairs = arr => [...arr].sort((x, y) => byDue(x.t, y.t));
 const emptyHtml = (icon, text, hint) => `<div class="empty"><b>${icon}</b>${text}${hint?`<small>${hint}</small>`:''}</div>`;
 
 function renderMain(){
+  M.classList.toggle('calmode', S.sel === '@cal');
+  $('#calBtn')?.classList.toggle('on', S.sel === '@cal');
+  if (S.sel === '@cal'){ renderCalendar(); return; } // calendar.js
   if (S.sel === '@today' || S.sel === '@all'){
     const td = today(), isToday = S.sel === '@today';
     const ts = allTasks();
@@ -495,7 +498,7 @@ function renderDetails(){
       <label>Статус</label><select data-d="status">${opt(STAT, t.status)}</select>
       <label>Срок</label><div class="d-row"><input type="date" data-d="due" value="${t.due}"><input type="time" data-d="time" value="${t.time}" ${t.due?'':'disabled'} title="Время (необязательно)"></div>
       <label>Напоминание</label><select data-d="remind" ${t.due?'':'disabled'} title="${t.due?'':'Сначала укажите срок'}">${opt(REMIND, t.remind)}</select>
-      <label>Приоритет</label><select data-d="pr">${opt({1:'Высокий', 2:'Средний', 3:'Низкий'}, t.pr)}</select>
+      <label>Приоритет</label><select data-d="pr" class="pr${t.pr}">${opt({1:'Высокий', 2:'Средний', 3:'Низкий'}, t.pr)}</select>
       <label>Страница</label><select data-d="page">${pageOptions(p.id)}</select>
     </div>
     ${t.due && t.remind !== '' && !t.time ? `<div class="hint" style="padding:0 0 8px">Время не указано — напомню в ${DEFAULT_TIME}.</div>` : ''}
@@ -593,6 +596,7 @@ function palRender(){
   if (!q){
     items.push({group:'Перейти', html:'<span>☀️</span><span class="nm">Сегодня</span>', run:() => go('@today')});
     items.push({group:'Перейти', html:'<span>🗂️</span><span class="nm">Все задачи</span>', run:() => go('@all')});
+    items.push({group:'Перейти', html:'<span>📅</span><span class="nm">Календарь</span>', run:() => go('@cal')});
     S.pages.filter(p => p.fav).concat(S.pages.filter(p => !p.fav)).slice(0, 12).forEach(p => items.push(pageItem(p)));
   } else {
     S.pages.filter(p => (p.title || UNTITLED).toLowerCase().includes(q) || stripHtml(p.notes).toLowerCase().includes(q))
@@ -644,6 +648,7 @@ $('#theme').onclick = toggleTheme;
 $('#exp').onclick = exportData;
 $('#imp').onclick = importData;
 $('#searchBtn').onclick = openPalette;
+$('#calBtn').onclick = () => go('@cal');
 $('#hideSide').onclick = toggleSidebar;
 $('#showSide').onclick = toggleSidebar;
 
