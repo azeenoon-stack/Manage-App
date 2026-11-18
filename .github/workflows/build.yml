@@ -39,7 +39,19 @@ jobs:
 
       - run: npm ci
 
-      - run: npm run ${{ matrix.script }}
+      - name: Сборка
+        shell: bash
+        run: |
+          set -o pipefail
+          npm run ${{ matrix.script }} 2>&1 | tee build.log
+
+      # конец лога сборки — в аннотацию ошибки, её видно без входа в GitHub
+      - name: Показать ошибку сборки
+        if: failure()
+        shell: bash
+        run: |
+          msg=$(tail -n 40 build.log | sed -e 's/\x1b\[[0-9;]*m//g' -e 's/%/%25/g' | awk '{printf "%s%%0A", $0}')
+          echo "::error title=Лог сборки::${msg}"
 
       - name: Сохранить файлы сборки
         uses: actions/upload-artifact@v4

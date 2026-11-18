@@ -1,7 +1,7 @@
 {
   "name": "planer",
   "productName": "Планер",
-  "version": "1.0.2",
+  "version": "1.0.3",
   "description": "Простой планер задач и заметок",
   "main": "src/main.js",
   "private": true,
