@@ -47,6 +47,8 @@ function ask(msg, okText = 'Удалить', cancel = true){
 /* ---------- данные ---------- */
 let S;
 let noSave = false; // если файл данных не удалось прочитать — не перезаписываем его
+let baseRev = 0;     // версия данных от главного процесса, на которой основаны наши правки (синхронизация)
+let savesInFlight = 0;
 
 function seed(){
   const a = uid(), b = uid(), c = uid();
@@ -101,18 +103,22 @@ function flush(){
   if (saveT === null) return;
   clearTimeout(saveT); saveT = null;
   if (noSave) return;
-  window.api.save(S).catch(err => { console.error(err); ask('Не удалось сохранить данные: ' + err.message, 'OK', false); });
+  savesInFlight++;
+  window.api.save(S, baseRev)
+    .catch(err => { console.error(err); ask('Не удалось сохранить данные: ' + err.message, 'OK', false); })
+    .finally(() => { savesInFlight--; applyRemote(); }); // sync.js
   syncReminders();
 }
 // Сохранение с задержкой ~300 мс, чтобы не писать файл на каждое нажатие клавиши.
 function save(){ clearTimeout(saveT); saveT = setTimeout(flush, 300); }
 // При закрытии окна сохраняем синхронно всё, что ещё не записано.
 window.addEventListener('beforeunload', () => {
-  if (saveT !== null){ clearTimeout(saveT); saveT = null; if (!noSave) window.api.saveSync(S); }
+  if (saveT !== null){ clearTimeout(saveT); saveT = null; if (!noSave) window.api.saveSync(S, baseRev); }
 });
 
 async function loadData(){
   const res = await window.api.load();
+  baseRev = res.rev || 0;
   let msg = res.message || '';
   let d = res.data;
   if (!d){
@@ -661,6 +667,7 @@ window.api.onCommand((cmd, arg) => {
   if (cmd === 'toggle-theme') toggleTheme();
   if (cmd === 'toggle-sidebar') toggleSidebar();
   if (cmd === 'palette') openPalette();
+  if (cmd === 'sync') openSyncDialog(); // sync.js
   if (cmd === 'open-task'){ if (page(arg.pageId)) go(arg.pageId); if (findTask(arg.taskId).length) openDetails(arg.taskId); }
   if (cmd === 'reminded'){ const [, t] = findTask(arg.id); if (t){ t.reminded = arg.at; save(); } }
 });
@@ -686,6 +693,7 @@ window.api.info().then(info => {
 }).then(msg => {
   render();
   syncReminders();
+  applyRemote(); // изменения с сервера, пришедшие во время загрузки (sync.js)
   // раз в минуту обновляем «Сегодня» и подсветку сроков (например, после полуночи)
   let day = today();
   setInterval(() => { if (today() !== day){ day = today(); refresh(); } }, 60000);

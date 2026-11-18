@@ -295,3 +295,28 @@ main.calmode{overflow:hidden;display:flex}
 .chip.allday.pr-bg2,.ev.pr-bg2{color:#3d2a05}
 .foot button{white-space:nowrap}
 .chip.allday b{font-weight:400;opacity:.9;flex:none}
+
+/* ---------- синхронизация ---------- */
+.foot .syncbtn{position:relative}
+.syncbtn i,.sy-st i{display:inline-block;width:8px;height:8px;border-radius:50%;flex:none}
+.syncbtn i{position:absolute;right:3px;bottom:4px;box-shadow:0 0 0 2px var(--side)}
+.syncbtn[data-state=off] i{display:none}
+[data-state=online]>i,i[data-state=online]{background:#3e9b6c}
+[data-state=connecting]>i,i[data-state=connecting]{background:#e9a23b}
+[data-state=offline]>i,i[data-state=offline]{background:#9a978f}
+[data-state=error]>i,i[data-state=error]{background:#e5484d}
+i[data-state=off]{background:var(--line)}
+.sync-dlg{width:420px;display:flex;flex-direction:column;gap:12px}
+.sync-dlg h3{margin:0;font-size:17px}
+.sync-dlg .hint{margin:0;padding:0;white-space:normal;color:var(--muted);font-size:13px}
+.sync-dlg label{display:flex;flex-direction:column;gap:5px;font-size:13px;color:var(--muted)}
+.sync-dlg input{font:inherit;font-size:14px;color:var(--text);background:var(--bg);border:1px solid var(--line);border-radius:7px;padding:7px 10px;outline:none}
+.sync-dlg input:focus{border-color:var(--accent)}
+.sync-dlg label.sy-chk{flex-direction:row;align-items:flex-start;gap:9px;font-size:12.5px;line-height:1.45}
+.sync-dlg label.sy-chk input{margin:2px 0 0;accent-color:var(--accent)}
+.sync-dlg label.sy-chk b{color:var(--text);font-weight:600}
+.sy-st{display:flex;align-items:baseline;gap:8px;font-size:13px;white-space:pre-line}
+.sy-err{color:var(--p1);font-size:13px}
+.sy-err:empty{display:none}
+.sync-dlg nav{margin-top:4px}
+.sync-dlg nav .sp{flex:1}

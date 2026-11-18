@@ -1,3 +1,6 @@
 node_modules/
 dist/
 out/
+
+# копия src/sync-core.js для локального запуска сервера
+server/sync-core.js

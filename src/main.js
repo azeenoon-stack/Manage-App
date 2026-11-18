@@ -3,9 +3,11 @@ const { app, BrowserWindow, shell, ipcMain, Menu, dialog, screen, Notification }
 const fs = require('fs');
 const path = require('path');
 const { createStorage } = require('./storage');
+const { createSync } = require('./sync');
 
 const isMac = process.platform === 'darwin';
 let storage;
+let sync;
 let win = null;
 
 /* ---------- одна копия приложения ---------- */
@@ -113,7 +115,8 @@ function showAbout() {
     type: 'info',
     title: 'О программе',
     message: `Планер ${app.getVersion()}`,
-    detail: 'Простой планер задач и заметок.\nВсе данные хранятся локально на этом компьютере.\n\n' +
+    detail: 'Простой планер задач и заметок.\nДанные хранятся на этом компьютере' +
+            (sync && sync.getConfig().enabled ? ' и синхронизируются с вашим сервером.\n\n' : '.\n\n') +
             `Папка данных: ${app.getPath('userData')}\n` +
             `Electron ${process.versions.electron}`,
     buttons: ['OK', 'Открыть папку данных'],
@@ -144,6 +147,8 @@ function buildMenu() {
         { type: 'separator' },
         { label: 'Экспорт…', accelerator: 'CmdOrCtrl+Shift+E', click: () => send('export') },
         { label: 'Импорт…', accelerator: 'CmdOrCtrl+O', click: () => send('import') },
+        { type: 'separator' },
+        { label: 'Синхронизация…', click: () => send('sync') },
         { type: 'separator' },
         isMac ? { role: 'close', label: 'Закрыть окно' } : { role: 'quit', label: 'Выход' },
       ],
@@ -242,12 +247,17 @@ function registerIpc() {
     scheduleReminders();
   });
 
-  ipcMain.handle('data:load', () => storage.load());
-  ipcMain.handle('data:save', (_e, data) => { storage.save(data); return true; });
-  ipcMain.on('data:save-sync', (e, data) => {
-    try { storage.save(data); e.returnValue = true; }
+  ipcMain.handle('data:load', () => sync.load());
+  ipcMain.handle('data:save', (_e, data, rev) => { sync.save(data, rev); return true; });
+  ipcMain.on('data:save-sync', (e, data, rev) => {
+    try { sync.save(data, rev); e.returnValue = true; }
     catch (err) { console.error(err); e.returnValue = false; }
   });
+
+  // синхронизация с сервером
+  ipcMain.handle('sync:get', () => sync.getConfig());
+  ipcMain.handle('sync:set', (_e, c) => sync.setConfig(c || {}));
+  ipcMain.handle('sync:now', () => { sync.reconnect(); return true; });
 
   ipcMain.handle('data:export', async (_e, text) => {
     const r = await dialog.showSaveDialog(win, {
@@ -276,6 +286,12 @@ app.whenReady().then(() => {
   // ID нужен Windows для уведомлений (в установленной версии совпадает с ярлыком в меню «Пуск»)
   if (process.platform === 'win32') app.setAppUserModelId(app.isPackaged ? 'uz.planer.app' : process.execPath);
   storage = createStorage(app.getPath('userData'));
+  sync = createSync({
+    dir: app.getPath('userData'),
+    storage,
+    onRemote: m => { if (win) win.webContents.send('sync:remote', m); },
+    onStatus: st => { if (win) win.webContents.send('sync:status', st); },
+  });
   registerIpc();
   buildMenu();
   createWindow();
@@ -283,6 +299,8 @@ app.whenReady().then(() => {
     if (BrowserWindow.getAllWindows().length === 0) createWindow();
   });
 });
+
+app.on('before-quit', () => { if (sync) sync.stop(); });
 
 app.on('window-all-closed', () => {
   if (!isMac) app.quit();
