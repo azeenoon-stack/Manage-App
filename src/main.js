@@ -6,6 +6,23 @@ const { createStorage } = require('./storage');
 const { createSync } = require('./sync');
 
 const isMac = process.platform === 'darwin';
+
+// Интерфейс на русском, и поля дат всегда в формате ДД.ММ.ГГГГ — независимо от языка системы.
+// На Windows язык задаёт ключ запуска --lang. На macOS он не действует: Chromium берёт язык из
+// настройки AppleLanguages, поэтому ставим её только для Планера (системный язык не меняется).
+app.commandLine.appendSwitch('lang', 'ru');
+function ensureRussianOnMac() {
+  if (!isMac) return false;
+  const { systemPreferences } = require('electron');
+  const cur = systemPreferences.getUserDefault('AppleLanguages', 'array');
+  if (Array.isArray(cur) && cur[0] === 'ru') return false;
+  systemPreferences.setUserDefault('AppleLanguages', 'array', ['ru']);
+  // язык применяется при запуске — один раз перезапускаемся (ключ защищает от повторного перезапуска)
+  if (process.argv.includes('--planer-lang-set')) return false;
+  app.relaunch({ args: [...process.argv.slice(1), '--planer-lang-set'] });
+  app.exit(0);
+  return true;
+}
 let storage;
 let sync;
 let win = null;
@@ -283,6 +300,7 @@ function registerIpc() {
 
 /* ---------- запуск ---------- */
 app.whenReady().then(() => {
+  if (ensureRussianOnMac()) return;
   // ID нужен Windows для уведомлений (в установленной версии совпадает с ярлыком в меню «Пуск»)
   if (process.platform === 'win32') app.setAppUserModelId(app.isPackaged ? 'uz.planer.app' : process.execPath);
   storage = createStorage(app.getPath('userData'));
