@@ -218,7 +218,7 @@ main.calmode{overflow:hidden;display:flex}
 .m-dow{display:grid;grid-template-columns:repeat(7,1fr);flex:none}
 .m-dow div{text-align:center;font-size:11px;font-weight:600;color:var(--muted);padding:8px 0 4px;letter-spacing:.06em;text-transform:uppercase;border-left:1px solid var(--grid)}
 .m-dow div:first-child{border-left:0}
-.m-grid{flex:1;display:grid;grid-template-columns:repeat(7,minmax(0,1fr))}
+.m-grid{flex:1;display:flex;flex-direction:column}
 .mc{border-left:1px solid var(--grid);border-bottom:1px solid var(--grid);padding:4px 4px 6px;min-width:0;cursor:pointer;transition:background .12s;overflow:hidden}
 .mc:nth-child(7n+1){border-left:0}
 .mc:hover{background:rgba(127,127,127,.04)}
@@ -320,3 +320,23 @@ i[data-state=off]{background:var(--line)}
 .sy-err:empty{display:none}
 .sync-dlg nav{margin-top:4px}
 .sync-dlg nav .sp{flex:1}
+
+/* ---------- многодневные задачи ---------- */
+.m-week{flex:1 1 0;min-height:96px;position:relative;display:grid;grid-template-columns:repeat(7,minmax(0,1fr))}
+.m-bars,.wk-allbars{position:relative;pointer-events:none}
+.m-bars{position:absolute;inset:0}
+.m-bars .chip,.m-bars .more,.wk-allbars .chip{position:absolute;pointer-events:auto}
+.m-bars .more{height:20px}
+.chip.cut-l{border-top-left-radius:0;border-bottom-left-radius:0}
+.chip.cut-r{border-top-right-radius:0;border-bottom-right-radius:0}
+.cal.dnd .chip,.cal.dnd .more{pointer-events:none}
+.wk-allrow>*{grid-row:1}
+.wk-allrow>.wk-gutter{grid-column:1}
+.wk-allbars{grid-column:2/-1}
+.wk-all{min-height:0}
+.task .meta .span-to{color:var(--muted)}
+.task .meta .span-to.over{color:var(--p1)}
+.task .meta .span-to.today{color:var(--accent);font-weight:600}
+.d-row .x{flex:none;opacity:1}
+.cp-end{display:flex;align-items:center;gap:8px;font-size:13px;color:var(--muted)}
+.cp-end input{font:inherit;font-size:13px;color:var(--text);background:var(--bg);border:1px solid var(--line);border-radius:6px;padding:3px 6px}

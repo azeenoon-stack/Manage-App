@@ -3,7 +3,7 @@
    Всё состояние лежит в объекте S, после любого изменения вызываем save() и нужный render. */
 
 const KEY = 'planer-v1'; // ключ localStorage из прототипа (только для переноса данных)
-const DATA_VERSION = 2;
+const DATA_VERSION = 3;
 const EMOJI = ['📄','🏠','💼','📌','🎯','✅','📚','💡','🛒','✈️','🏋️','🎨','💰','🧠','📅','🔥','⭐','🌱','🎵','🍳','🧩','🚀','❤️','📝'];
 const STAT = {todo:'Сделать', doing:'В работе', done:'Готово'};
 const PR = {1:'● Высокий', 2:'● Средний', 3:'● Низкий'};
@@ -52,7 +52,7 @@ let savesInFlight = 0;
 
 function seed(){
   const a = uid(), b = uid(), c = uid();
-  const T = (text, status, due, pr, extra = {}) => ({id:uid(), text, status, due, time:'', pr, remind:'', desc:'', subs:[], ...extra});
+  const T = (text, status, due, pr, extra = {}) => ({id:uid(), text, status, due, end:'', time:'', pr, remind:'', desc:'', subs:[], ...extra});
   return { version:DATA_VERSION, theme:'light', sel:a, pages:[
     {id:a, parent:null, icon:'🏠', title:'Добро пожаловать', view:'list', open:true, fav:true,
      notes:'<p>Это ваше пространство. Создавайте страницы и подстраницы слева, пишите заметки здесь, а задачи ведите ниже — списком или доской.</p>',
@@ -80,6 +80,11 @@ function migrate(d){
     }
     d.version = 2;
   }
+  if (d.version < 3){
+    // v3: дата окончания у задач (end) — для задач на несколько дней, '' — однодневная
+    for (const p of d.pages) for (const t of p.tasks || []) t.end = t.end || '';
+    d.version = 3;
+  }
   // мягкая проверка полей, чтобы приложение не падало на неполных данных
   for (const p of d.pages){
     p.id = p.id || uid(); p.parent = p.parent ?? null; p.icon = p.icon || '📄'; p.title = p.title || '';
@@ -90,6 +95,7 @@ function migrate(d){
       t.due = t.due || ''; t.time = t.time || ''; t.pr = [1,2,3].includes(+t.pr) ? +t.pr : 3;
       t.remind = t.remind == null ? '' : String(t.remind); t.desc = t.desc || '';
       t.subs = Array.isArray(t.subs) ? t.subs : [];
+      t.end = /^\d{4}-\d{2}-\d{2}$/.test(t.end) && t.due && t.end > t.due ? t.end : '';
     }
   }
   const ids = new Set(d.pages.map(p => p.id));
@@ -138,6 +144,23 @@ async function loadData(){
 const page = id => S.pages.find(p => p.id === id);
 function findTask(tid){ for (const p of S.pages){ const t = p.tasks.find(t => t.id === tid); if (t) return [p, t]; } return []; }
 function allTasks(){ return S.pages.flatMap(p => p.tasks.map(t => ({t, p}))); }
+
+/* ---------- период задачи ---------- */
+// Последний день задачи: у многодневной — дата «до», у обычной — сам срок
+const endOf = t => (t.due && t.end > t.due) ? t.end : t.due;
+const isMulti = t => !!t.due && t.end > t.due;
+const dateOfIso = iso => { const [y, m, d] = iso.split('-').map(Number); return new Date(y, m-1, d); };
+const isoOfDate = d => `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+const shiftIso = (iso, n) => { const d = dateOfIso(iso); d.setDate(d.getDate() + n); return isoOfDate(d); };
+const daysBetween = (a, b) => Math.round((dateOfIso(b) - dateOfIso(a)) / 864e5);
+// Новый срок задачи. У многодневной задачи окончание сдвигается вместе с началом (длительность сохраняется).
+function setDue(t, v){
+  if (v && t.due && isMulti(t)) t.end = shiftIso(t.end, daysBetween(t.due, v));
+  t.due = v;
+  if (!v){ t.time = ''; t.end = ''; }
+}
+// «10–15 дек.» для многодневной задачи
+function fmtRange(t){ return isMulti(t) ? `${fmtDate(t.due)} – ${fmtDate(t.end)}` : fmtDate(t.due); }
 function descendants(id){ const out = [id]; S.pages.filter(p => p.parent === id).forEach(k => out.push(...descendants(k.id))); return out; }
 function pagePath(p){ const out = []; let c = p; while (c && c.parent){ c = page(c.parent); if (c) out.unshift(c); } return out; }
 
@@ -284,10 +307,11 @@ function toggleFav(id){ const p = page(id); p.fav = !p.fav; save(); render(); }
 
 /* ---------- основная часть ---------- */
 const M = $('#main');
-function dateCls(t){ if (!t.due || t.status === 'done') return ''; const td = today(); return t.due < td ? 'over' : t.due === td ? 'today' : ''; }
+function dateCls(t){ if (!t.due || t.status === 'done') return ''; const td = today(); return endOf(t) < td ? 'over' : t.due <= td ? 'today' : ''; }
 function metaHtml(t){
   const done = t.subs.filter(s => s.done).length;
   return [
+    isMulti(t) ? `<span class="span-to ${dateCls(t)}" title="Период: ${esc(fmtRange(t))}">→ ${esc(fmtDate(t.end))}</span>` : '',
     t.status === 'doing' ? '<span class="tag doing">В работе</span>' : '',
     t.subs.length ? `<span title="Подзадачи">☑ ${done}/${t.subs.length}</span>` : '',
     t.desc.trim() ? '<span title="Есть описание">≡</span>' : '',
@@ -321,8 +345,9 @@ function renderMain(){
     if (isToday){
       const open = ts.filter(({t}) => t.status !== 'done' && t.due);
       const g = (name, arr) => arr.length ? `<div class="group">${name}</div>` + sortPairs(arr).map(({t, p}) => taskRow(t, p, true)).join('') : '';
-      body = g('Просрочено', open.filter(({t}) => t.due < td))
-           + g('Сегодня', open.filter(({t}) => t.due === td))
+      // многодневная задача считается «сегодняшней» все дни периода и просроченной — после последнего дня
+      body = g('Просрочено', open.filter(({t}) => endOf(t) < td))
+           + g('Сегодня', open.filter(({t}) => t.due <= td && endOf(t) >= td))
            + g('Ближайшие 7 дней', open.filter(({t}) => t.due > td && t.due <= today(7)))
            || emptyHtml('🎉', 'На сегодня задач нет — отличный день.', 'Здесь появляются задачи со сроком на сегодня, просроченные и на ближайшую неделю.');
     } else {
@@ -348,8 +373,8 @@ function renderMain(){
         <div class="card ${t.status==='done'?'done':''} ${openTask===t.id?'sel':''}" draggable="true" data-tid="${t.id}">
           <div style="display:flex;gap:6px"><div class="txt" contenteditable="true" spellcheck="false" data-act="txt" style="flex:1">${esc(t.text)}</div><button class="x" data-act="del" title="Удалить">×</button></div>
           <div class="row"><span class="dot" style="background:var(--p${t.pr})" title="${PR[t.pr].slice(2)} приоритет"></span>
-          ${t.due ? `<span class="date ${dateCls(t)}" style="width:auto">${fmtDate(t.due)}${t.time?' '+t.time:''}</span>` : ''}
-          ${metaHtml({...t, status:'todo'})}</div>
+          ${t.due ? `<span class="date ${dateCls(t)}" style="width:auto">${fmtRange(t)}${t.time?' '+t.time:''}</span>` : ''}
+          ${metaHtml({...t, status:'todo', end:''})}</div>
         </div>`).join('') || '<div class="colempty">Перетащите сюда карточку</div>'}</div>`; }).join('')}</div>`;
   } else {
     tasksHtml = sortPairs(p.tasks.map(t => ({t, p}))).map(({t}) => taskRow(t, p, false)).join('')
@@ -417,7 +442,7 @@ M.addEventListener('change', e => {
   const a = e.target.dataset.act;
   if (a === 'due' && !validDate(e.target.value)) return;
   if (a === 'chk') t.status = e.target.checked ? 'done' : 'todo';
-  if (a === 'due'){ t.due = e.target.value; if (!t.due) t.time = ''; }
+  if (a === 'due') setDue(t, e.target.value);
   if (a === 'time') t.time = e.target.value;
   if (a === 'pr') t.pr = +e.target.value;
   delete t.reminded;
@@ -443,7 +468,7 @@ M.addEventListener('click', e => {
 M.addEventListener('keydown', e => {
   if (e.target.id === 'addt' && e.key === 'Enter' && e.target.value.trim()){
     const p = page(S.sel);
-    p.tasks.push({id:uid(), text:e.target.value.trim(), status:'todo', due:'', time:'', pr:3, remind:'', desc:'', subs:[]});
+    p.tasks.push({id:uid(), text:e.target.value.trim(), status:'todo', due:'', end:'', time:'', pr:3, remind:'', desc:'', subs:[]});
     save(); render(); $('#addt').focus();
   }
   if (e.target.id === 'title' && e.key === 'Enter'){ e.preventDefault(); $('#notes').focus(); }
@@ -503,6 +528,8 @@ function renderDetails(){
     <div class="d-grid">
       <label>Статус</label><select data-d="status">${opt(STAT, t.status)}</select>
       <label>Срок</label><div class="d-row"><input type="date" data-d="due" value="${t.due}"><input type="time" data-d="time" value="${t.time}" ${t.due?'':'disabled'} title="Время (необязательно)"></div>
+      <label>До</label><div class="d-row"><input type="date" data-d="end" value="${t.end}" min="${t.due}" ${t.due?'':'disabled'}
+        title="${t.due ? 'Последний день — для задач на несколько дней (необязательно)' : 'Сначала укажите срок'}">${t.end ? '<button class="x" data-d="end-clear" title="Убрать дату окончания">×</button>' : ''}</div>
       <label>Напоминание</label><select data-d="remind" ${t.due?'':'disabled'} title="${t.due?'':'Сначала укажите срок'}">${opt(REMIND, t.remind)}</select>
       <label>Приоритет</label><select data-d="pr" class="pr${t.pr}">${opt({1:'Высокий', 2:'Средний', 3:'Низкий'}, t.pr)}</select>
       <label>Страница</label><select data-d="page">${pageOptions(p.id)}</select>
@@ -532,10 +559,14 @@ D.addEventListener('input', e => {
 D.addEventListener('change', e => {
   const [p, t] = curTask(); if (!t) return;
   const a = e.target.dataset.d, v = e.target.value;
-  if (a === 'due' && !validDate(v)) return;
+  if ((a === 'due' || a === 'end') && !validDate(v)) return;
   if (a === 'done') t.status = e.target.checked ? 'done' : 'todo';
   else if (a === 'status') t.status = v;
-  else if (a === 'due'){ t.due = v; if (!v){ t.time = ''; t.remind = ''; } }
+  else if (a === 'due'){ setDue(t, v); if (!v) t.remind = ''; }
+  else if (a === 'end'){
+    if (v && v < t.due){ toast('Дата окончания не может быть раньше срока'); return; }
+    t.end = v > t.due ? v : '';
+  }
   else if (a === 'time') t.time = v;
   else if (a === 'remind') t.remind = v;
   else if (a === 'pr') t.pr = +v;
@@ -551,6 +582,7 @@ D.addEventListener('click', e => {
   if (a === 'close') closeDetails();
   if (a === 'gopage'){ const [p] = curTask(); const tid = openTask; go(p.id); openDetails(tid); }
   if (a === 'delete') deleteTask(openTask);
+  if (a === 'end-clear'){ const [, t] = curTask(); t.end = ''; save(); render(); }
   if (a === 'sub-del'){ const [, t] = curTask(); t.subs = t.subs.filter(s => s.id !== e.target.closest('[data-sid]').dataset.sid); save(); render(); }
 });
 D.addEventListener('keydown', e => {
